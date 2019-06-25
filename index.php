@@ -58,20 +58,24 @@ switch($request_method) {
 					!empty($data->password)
 				){		
 					$user->username = $data->username;
-					$user->password = $data->password;
+					$user->password = md5($data->password);
 					
 					$stmt = $user->login();					
 					$num = $stmt->rowCount();
 					if($num === 0){
 						http_response_code(400);
 						echo json_encode(array(
-							"message" => "Invalid Username or Password","data"=> "","error"=> true,"status"=> 400
+							"message" => "Invalid Username or Password","data"=> "","error"=> true,"code"=>"100","status"=> 400
 						));
 						
 					} else {
 						
 						$userdata = $stmt->fetch(PDO::FETCH_ASSOC);						
-						if( $data->password === $userdata['password'] ) {
+						if( $userdata['status'] != 1 ) {
+							http_response_code(400);
+							echo json_encode(array("message" => "Your account is not verified. Please verify your account","data"=> "","error"=> true,"code"=>"101","status"=> 400));
+							
+						}else if( md5($data->password) === $userdata['password'] ) {
 							
 							$token = array(
 							   "iss" => $iss,
@@ -79,10 +83,10 @@ switch($request_method) {
 							   "iat" => $iat,
 							   "nbf" => $nbf,
 							   "data" => array(
-								   "id" => $user->id,
-								   "firstname" => $user->firstname,
-								   "lastname" => $user->lastname,
-								   "email" => $user->email
+								   "id" => $userdata['id'],
+								   "firstname" =>$userdata['firstname'],
+								   "lastname" => $userdata['lastname'],
+								   "username" => $userdata['username']
 							   )
 							);					 
 												 
@@ -93,19 +97,24 @@ switch($request_method) {
 							//$decoded = JWT::decode($jwt, $key, array('HS256'));
 							
 							echo json_encode(array(
-								"data" => $userdata,
+								"data" => array(
+								   "id" => $userdata['id'],
+								   "firstname" =>$userdata['firstname'],
+								   "lastname" => $userdata['lastname'],
+								   "username" => $userdata['username']
+							   ),
 								"token" =>$jwt,
 								"error" => false,
 								"status"=>200
 							));
 						} else {
 							http_response_code(400);
-							echo json_encode(array("message" => "Invalid Username or Password","data"=> "","error"=> true,"status"=> 400));
+							echo json_encode(array("message" => "Invalid Username or Password","data"=> "","error"=> true,"code"=>"100","status"=> 400));
 						}
 					}
 				} else {
 					http_response_code(400);
-					echo json_encode(array("message" => "Invalid Username or Password","data"=> "","error"=> true,"status"=> 400));
+					echo json_encode(array("message" => "Invalid Username or Password","data"=> "","error"=> true,"code"=>"100","status"=> 400));
 				}
 				
 			} else if(!empty($uri[3]) && $uri[3] === 'signup') {
@@ -116,7 +125,7 @@ switch($request_method) {
 					!empty($data->lastname)					
 				){		
 					$user->username = $data->username;
-					$user->password = $data->password;
+					$user->password = md5($data->password);
 					$user->firstname = $data->firstname;
 					$user->lastname = $data->lastname;
 					/*$user->address = $data->address;
@@ -128,7 +137,7 @@ switch($request_method) {
 					if( $user->isAlreadyExist() ){
 						http_response_code(400);
 						echo json_encode(array(
-							"message" => "Username Already exist","data"=> "","error"=> true,"status"=> 400
+							"message" => "Username Already exist","data"=> "","error"=> true,"code"=>"102","status"=> 400
 						));
 					} else {
 						if($user->signup()){							
@@ -139,22 +148,24 @@ switch($request_method) {
 							$mail->addAddress($data->username, $data->firstname." ".$data->lastname);//Recipient name is optional							
 							$mail->addReplyTo("admin@tripaider.in", "Tripaider"); //CC and BCC 							 
 							$mail->isHTML(true); 
-							$mail->Subject = "Welcome to tripaider.in!"; 
-							$mail_body = "<div>
-								<p>Hi ".$data->firstname.",</p>
-								<p>You have successfully created your tripaider.in account with the following email address: ".$data->username.". In order to access all areas of the site you must activate your account by clicking <a href=\"".$iss."/verification/".$data->username."\">here</a>.</p>
-								<p>If you have any queries or comments just email support@tripaider.in. We would love to hear from you!</p><br />
+							$mail->Subject = "Account Verification Mail"; 
+							$mail_body = "
+								<p>Hi ".$data->firstname.",</p><br/>
+								<p>You have successfully created your tripaider.in account with the following email address: ".$data->username.". 
+								In order to access all areas of the site you must activate your account by clicking <a href=\"".$iss."/verification/".$data->username."\">here</a>.</p><br/>
+
+								<p>If you have any queries or comments just email support@tripaider.in. We would love to hear from you!</p>
+
 								<p>Cheers,</p>
-								<p>Team tripaider.in</p>
-								</div>
-							";
+								<p>Tripaider.in team</p>
+							";	
 
 							$mail->Body = $mail_body;
 							//$mail->send();
 							
 							http_response_code(201);
 							echo json_encode(array(
-								"message" => "Record Saved successfully","data"=> "","error"=> false,"status"=> 201
+								"message" => "Record Saved successfully","data"=> "","error"=> false,"code"=>"105","status"=> 201
 							));
 							
 							
@@ -172,14 +183,14 @@ switch($request_method) {
 						} else{
 							http_response_code(400);
 							echo json_encode(array(
-								"message" => "Error saving record","data"=> "","error"=> true,"status"=> 400
+								"message" => "Error saving record","data"=> "","error"=> true,"code"=>"103","status"=> 400
 							));
 						}
 					}					
 					
 				} else {
 					http_response_code(400);
-					echo json_encode(array("message" => "Invalid data, all field are reqiuired","data"=> "","error"=> true,"status"=> 400));
+					echo json_encode(array("message" => "Invalid data, all field are reqiuired","data"=> "","error"=> true,"code"=>"104","status"=> 400));
 				}
 				
 			} else {
@@ -196,7 +207,7 @@ switch($request_method) {
 				if($user->verify() ){
 					http_response_code(200);
 					echo json_encode(array(
-						"message" => "Account Verified successfully","data"=> "","error"=> false,"status"=> 200
+						"message" => "Account Verified successfully","data"=> "","error"=> false,"code"=>"110","status"=> 200
 					));
 					
 					$stmt = $user->getUser();
@@ -232,12 +243,98 @@ switch($request_method) {
 					
 				} else {
 					http_response_code(400);
-					echo json_encode(array("message" => "Verification Error","data"=> "","error"=> true,"status"=> 400));
+					echo json_encode(array("message" => "Verification Error","data"=> "","error"=> true,"code"=>"111","status"=> 400));
 				}
+				
+				
+			} else if(!empty($uri[3]) && $uri[3] === 'forgetpassword') {
+				$username = htmlspecialchars(strip_tags($uri[4]));
+				$user->username = $username;				
+				
+				$stmt = $user->getUser();					
+				$num = $stmt->rowCount();
+				
+				if($num === 0){
+					http_response_code(400);
+					echo json_encode(array(
+						"message" => "Invalid Username","data"=> "","error"=> true,"code"=>"120","status"=> 400
+					));
+						
+				} else {
+					
+					http_response_code(200);
+					echo json_encode(array(
+						"message" => "Mail send successfully","data"=> "","error"=> false,"code"=>"121","status"=> 200
+					));					
+					
+					$userdata = $stmt->fetch(PDO::FETCH_ASSOC);		
+					
+					
+					$mail = new PHPMailer(true); //From email address and name 
+					$mail->From = "admin@tripaider.in"; 
+					$mail->FromName = "Tripaider"; //To address and name 
+					$mail->addAddress($userdata['username'], $userdata['firstname']." ".$userdata['lastname']);//Recipient name is optional							
+					$mail->addReplyTo("admin@tripaider.in", "Tripaider"); //CC and BCC 							 
+					$mail->isHTML(true); 
+					$mail->Subject = "Reset Password"; 
+					$mail_body = "
+						<p>Hi ".$userdata['firstname'].",</p><br/>
+						
+						<p>Click <a href=\"".$iss."/resetpassword/".$data->username."\">here</a> tp reset your password</p>
+
+												
+						<p>Tripaider.in team</p>
+					";	
+
+					$mail->Body = $mail_body;
+					$mail->send();
+					
+				}
+				
+			
 			} else{
 				http_response_code(404);
-				echo "Not Found1";
+				echo "Not Found";
 			}		
+		
+		case 'PUT':
+			if(!empty($uri[3]) && $uri[3] === 'resetpassword') {
+				
+				$data = json_decode(file_get_contents("php://input"));	
+				$user->username = $data->username;
+				$user->password = md5($data->password);
+				
+				$stmt = $user->getUser();					
+				$num = $stmt->rowCount();
+				
+				if($num === 0){
+					http_response_code(400);
+					echo json_encode(array(
+						"message" => "Invalid Username","data"=> "","error"=> true,"code"=>"120","status"=> 400
+					));
+						
+				} else {
+					
+					if($user->resetpassword() ){
+						http_response_code(200);
+						echo json_encode(array(
+							"message" => "Password changed successfully","data"=> "","error"=> false,"code"=>"131","status"=> 200
+						));
+					} else {
+						http_response_code(400);
+						echo json_encode(array(
+							"message" => "Error changing passworde","data"=> "","error"=> true,"code"=>"122","status"=> 400
+						));
+							
+					}
+					
+				}			
+				
+				
+			} else{
+				http_response_code(404);
+				echo "Not Found";
+			}	
 		
 		default:
 			// Invalid Request Method

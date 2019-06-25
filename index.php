@@ -48,6 +48,7 @@ $uri = explode( '/', $uri );
 //echo json_encode(array("message" => $data,"url" => $uri,"request_method"=>$request_method));
 //var_dump($_SERVER);
 
+
 switch($request_method) {
 		case 'POST':
 			// get posted data
@@ -329,6 +330,78 @@ switch($request_method) {
 					}
 					
 				}			
+				
+				
+			}else if(!empty($uri[3]) && $uri[3] === 'changepassword') {
+				
+				$header = apache_request_headers();
+				$jwt = $header['Authorization'] ? $header['Authorization'] : $header['authorization'];		
+				// if jwt is not empty
+				if($jwt){
+					try {
+						// decode jwt
+						$decoded = JWT::decode($jwt, $key, array('HS256'));	
+				 
+					}// if decode fails, it means jwt is invalid
+					catch (\Exception $e) { // Also tried JwtException				 
+						// set response code
+						http_response_code(401);					 
+						// tell the user access denied  & show error message
+						echo json_encode(array(
+							"message" => "Access denied.",
+							"errormsg" =>$e->getMessage(),
+							"error" => true,
+							"code"=>"150",
+							"status"=> 401
+						));
+					}
+				}// show error message if jwt is empty
+				else{
+					// set response code
+					http_response_code(401);				 
+					// tell the user access denied
+					echo json_encode(array("message" => "Access denied.","data"=> "","error"=> true,"code"=>"150","status"=> 401));
+				}
+				
+												
+				$data = json_decode(file_get_contents("php://input"));	
+				$user->username = $decoded->data->username;	
+				$old_password = md5($data->old_password);
+				$new_password = md5($data->new_password);
+				
+				$stmt = $user->getUser();					
+				$num = $stmt->rowCount();
+
+				
+				if($num === 0){
+					http_response_code(401);
+					echo json_encode(array(
+						"message" => "Invalid Authorization token","data"=> "","error"=> true,"code"=>"151","status"=> 401
+					));
+						
+				} else {
+					$userdata = $stmt->fetch(PDO::FETCH_ASSOC);	
+					
+					if( md5($data->old_password) != $userdata['password'] ) {
+						http_response_code(401);
+						echo json_encode(array(
+							"message" => "Invalid Old Password","data"=> "","error"=> true,"code"=>"152","status"=> 401
+						));
+					}
+					else if($user->resetpassword() ){
+						http_response_code(200);
+						echo json_encode(array(
+							"message" => "Password changed successfully","data"=> "","error"=> false,"code"=>"131","status"=> 200
+						));
+					} else {
+						http_response_code(400);
+						echo json_encode(array(
+							"message" => "Error changing passworde","data"=> "","error"=> true,"code"=>"153","status"=> 400
+						));
+							
+					}
+					
+				}		
 				
 				
 			} else{

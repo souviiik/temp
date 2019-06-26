@@ -141,7 +141,13 @@ switch($request_method) {
 							"message" => "Username Already exist","data"=> "","error"=> true,"code"=>"102","status"=> 400
 						));
 					} else {
-						if($user->signup()){							
+						if($user->signup()){
+
+							http_response_code(201);
+							echo json_encode(array(
+								"message" => "Record Saved successfully","data"=> "","error"=> false,"code"=>"105","status"=> 201
+							));
+							
 							// Instantiation and passing `true` enables exceptions
 							$mail = new PHPMailer(true); //From email address and name 
 							$mail->From = "admin@tripaider.in"; 
@@ -162,12 +168,8 @@ switch($request_method) {
 							";	
 
 							$mail->Body = $mail_body;
-							//$mail->send();
+							//$mail->send();				
 							
-							http_response_code(201);
-							echo json_encode(array(
-								"message" => "Record Saved successfully","data"=> "","error"=> false,"code"=>"105","status"=> 201
-							));
 							
 							
 							  //Server settings
@@ -180,7 +182,12 @@ switch($request_method) {
 							$mail->SMTPSecure = 'tls';                                  // Enable TLS encryption, `ssl` also accepted
 							$mail->Port       = 587;                                    // TCP port to connect to*/
 	
-							$mail->send();
+							try {
+								$mail->send();
+							}catch(\Exception $e){
+								
+							};
+							
 						} else{
 							http_response_code(400);
 							echo json_encode(array(
@@ -239,7 +246,11 @@ switch($request_method) {
 					";	
 
 					$mail->Body = $mail_body;
-					$mail->send();
+					try {
+						$mail->send();
+					}catch(\Exception $e){
+						
+					};
 					
 					
 				} else {
@@ -288,7 +299,11 @@ switch($request_method) {
 					";	
 
 					$mail->Body = $mail_body;
-					$mail->send();
+					try {
+						$mail->send();
+					}catch(\Exception $e){
+						
+					};
 					
 				}
 				
@@ -296,7 +311,8 @@ switch($request_method) {
 			} else{
 				http_response_code(404);
 				echo "Not Found";
-			}		
+			}
+			break;			
 		
 		case 'PUT':
 			if(!empty($uri[3]) && $uri[3] === 'resetpassword') {
@@ -367,7 +383,7 @@ switch($request_method) {
 				$data = json_decode(file_get_contents("php://input"));	
 				$user->username = $decoded->data->username;	
 				$old_password = md5($data->old_password);
-				$new_password = md5($data->new_password);
+				$user->password = md5($data->new_password);
 				
 				$stmt = $user->getUser();					
 				$num = $stmt->rowCount();
@@ -407,14 +423,14 @@ switch($request_method) {
 			} else{
 				http_response_code(404);
 				echo "Not Found";
-			}	
+			}
+			break;
 		
 		default:
 			// Invalid Request Method
 			//header("HTTP/1.0 405 Method Not Allowed");
 			http_response_code(404);
-			echo "Not Found1";
-			var_dump(encrypt_decrypt("admin","encrypt"));
+			echo "Not Found";
 			break;
 }
 ?>

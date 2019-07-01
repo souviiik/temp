@@ -211,15 +211,19 @@ switch($request_method) {
 			if(!empty($uri[3]) && $uri[3] === 'verify') {
 				$username = htmlspecialchars(strip_tags($uri[4]));
 				$user->username = $username;
+				
+				$stmt = $user->getUser();
+				$userdata = $stmt->fetch(PDO::FETCH_ASSOC);	
+				if($userdata['status'] != 0){
+					http_response_code(400);
+					echo json_encode(array("message" => "Account Already Verified","data"=> "","error"=> true,"code"=>"113","status"=> 400));
+				}	
 				//http_response_code(200);
-				if($user->verify() ){
+				else if($userdata['status'] == 0 &&  $user->verify() ){
 					http_response_code(200);
 					echo json_encode(array(
 						"message" => "Account Verified successfully","data"=> "","error"=> false,"code"=>"110","status"=> 200
-					));
-					
-					$stmt = $user->getUser();
-					$userdata = $stmt->fetch(PDO::FETCH_ASSOC);		
+					));	
 					
 					
 					$mail = new PHPMailer(true); //From email address and name 

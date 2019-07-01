@@ -107,7 +107,7 @@ class User{
 	
 	function getUser(){
 		$query = "SELECT
-                `id`, `username`,`password`, `firstname`,`lastname`,`mobile`
+                `id`, `username`,`password`, `firstname`,`lastname`,`mobile`,`status`
             FROM
                 " . $this->table_name . " 
             WHERE
@@ -122,7 +122,7 @@ class User{
 	function resetpassword(){
 		$query = "UPDATE              
                 " . $this->table_name . " 
-			SET password='".htmlspecialchars($this->password)."'
+			SET password='".$this->password."'
             WHERE
                 username='".htmlspecialchars($this->username)."'";
 		// prepare query statement

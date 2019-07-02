@@ -24,6 +24,7 @@ use PHPMailer\PHPMailer\Exception;
 
 $key = "1234789";
 $iss = "http://tripaider.in";
+$dvl = "http://dvl.tripaider.in";
 $aud = "http://tripaider.in";
 $iat = 1356999524;
 $nbf = 1357000000;
@@ -102,7 +103,13 @@ switch($request_method) {
 								   "id" => $userdata['id'],
 								   "firstname" =>$userdata['firstname'],
 								   "lastname" => $userdata['lastname'],
-								   "username" => $userdata['username']
+								   "username" => $userdata['username'],								   
+								   "address" =>$userdata['address'],
+								   "country" => $userdata['country'],
+								   "state" => $userdata['state'],								   
+								   "pincode" =>$userdata['pincode'],
+								   "created" => $userdata['created'],
+								   "mobile" => $userdata['mobile']
 							   ),
 								"token" =>$jwt,
 								"error" => false,
@@ -142,12 +149,6 @@ switch($request_method) {
 						));
 					} else {
 						if($user->signup()){
-
-							http_response_code(201);
-							echo json_encode(array(
-								"message" => "Record Saved successfully","data"=> "","error"=> false,"code"=>"105","status"=> 201
-							));
-							
 							// Instantiation and passing `true` enables exceptions
 							$mail = new PHPMailer(true); //From email address and name 
 							$mail->From = "admin@tripaider.in"; 
@@ -155,21 +156,23 @@ switch($request_method) {
 							$mail->addAddress($data->username, $data->firstname." ".$data->lastname);//Recipient name is optional							
 							$mail->addReplyTo("admin@tripaider.in", "Tripaider"); //CC and BCC 							 
 							$mail->isHTML(true); 
-							$mail->Subject = "Account Verification Mail"; 
+							$mail->Subject = "Welcome to tripaider.in!"; 
 							$mail_body = "
-								<p>Hi ".$data->firstname.",</p><br/>
-								<p>You have successfully created your tripaider.in account with the following email address: ".$data->username.". 
-								In order to access all areas of the site you must activate your account by clicking <a href=\"".$iss."/verification/".$data->username."\">here</a>.</p><br/>
-
-								<p>If you have any queries or comments just email support@tripaider.in. We would love to hear from you!</p>
-
-								<p>Cheers,</p>
-								<p>Tripaider.in team</p>
+								<p>Hi ".$data->firstname.",</p>
+								<p>You have successfully created your tripaider account with the following email address: ".$data->username.". In order to access all areas of the site you must activate your account by clicking below button:</p>
+								<p><a style='background: #007bff; color: #fff; text-decoration: none; padding: 10px 25px; border-radius: 5px; margin: 10px auto;' href=\"".$dvl."/verification/".$data->username."\">ACTIVATE YOUR ACCOUNT</a></p>
+								<p>If you have any queries or comments just email support@tripaider.in. We would love to hear from you!</p><br />
+								<p>Thank you for visiting tripaider's website.<br/>
+								The TRIPAIDER Web Team</p>
 							";	
 
 							$mail->Body = $mail_body;
 							//$mail->send();				
 							
+							http_response_code(201);
+							echo json_encode(array(
+								"message" => "Record saved successfully","data"=> "","error"=> false,"code"=>"105","status"=> 201
+							));
 							
 							
 							  //Server settings
@@ -187,6 +190,7 @@ switch($request_method) {
 							}catch(\Exception $e){
 								
 							};
+							
 							
 						} else{
 							http_response_code(400);
@@ -211,19 +215,15 @@ switch($request_method) {
 			if(!empty($uri[3]) && $uri[3] === 'verify') {
 				$username = htmlspecialchars(strip_tags($uri[4]));
 				$user->username = $username;
-				
-				$stmt = $user->getUser();
-				$userdata = $stmt->fetch(PDO::FETCH_ASSOC);	
-				if($userdata['status'] != 0){
-					http_response_code(400);
-					echo json_encode(array("message" => "Account Already Verified","data"=> "","error"=> true,"code"=>"113","status"=> 400));
-				}	
 				//http_response_code(200);
-				else if($userdata['status'] == 0 &&  $user->verify() ){
+				if($user->verify() ){
 					http_response_code(200);
 					echo json_encode(array(
 						"message" => "Account Verified successfully","data"=> "","error"=> false,"code"=>"110","status"=> 200
-					));	
+					));
+					
+					$stmt = $user->getUser();
+					$userdata = $stmt->fetch(PDO::FETCH_ASSOC);		
 					
 					
 					$mail = new PHPMailer(true); //From email address and name 
@@ -234,22 +234,14 @@ switch($request_method) {
 					$mail->isHTML(true); 
 					$mail->Subject = "Account Verified Successfully"; 
 					$mail_body = "
-						<p>Hi ".$userdata['firstname'].",</p><br/>
-						<p>Congratulations! Your tripaider.in account is verified and live.<p> 
-						<p>You can start investing in 5000+ mutual funds Groww. Try making your first investment today by clicking below!.</p><br/>
-
-						<p>Click <a href=\"".$iss."\">here</a></p>
-
-						<p>Need help with Investing? We got you covered!
-
-						<p>Get started with our Beginner's guide to mutual funds.</p>
-						<p>Need help choosing the right funds? Try Assistant.</p>
-						<p>Have external investments? Track them on Groww.</p>
-						
-						<p>Tripaider.in team</p>
+						<p>Hi ".$userdata['firstname'].",</p>
+						<p>Congratulations! Your tripaider.in account is verified and live.<p><br/>
+						<p>Thank you for visiting tripaider's website.<br/>
+						The TRIPAIDER Web Team</p>
 					";	
 
 					$mail->Body = $mail_body;
+					
 					try {
 						$mail->send();
 					}catch(\Exception $e){
@@ -259,7 +251,7 @@ switch($request_method) {
 					
 				} else {
 					http_response_code(400);
-					echo json_encode(array("message" => "Verification Error","data"=> "","error"=> true,"code"=>"111","status"=> 400));
+					echo json_encode(array("message" => "Verification error","data"=> "","error"=> true,"code"=>"111","status"=> 400));
 				}
 				
 				
@@ -279,11 +271,13 @@ switch($request_method) {
 				} else {
 					
 					http_response_code(200);
-					echo json_encode(array(
-						"message" => "Mail send successfully","data"=> "","error"=> false,"code"=>"121","status"=> 200
-					));					
+					$userdata = $stmt->fetch(PDO::FETCH_ASSOC);	
+
+					$encode = md5($userdata['username']."_".$key);
 					
-					$userdata = $stmt->fetch(PDO::FETCH_ASSOC);		
+					echo json_encode(array(
+						"message" => "Mail send successfully","data"=> $encode,"error"=> false,"code"=>"121","status"=> 200
+					));	
 					
 					
 					$mail = new PHPMailer(true); //From email address and name 
@@ -294,12 +288,11 @@ switch($request_method) {
 					$mail->isHTML(true); 
 					$mail->Subject = "Reset Password"; 
 					$mail_body = "
-						<p>Hi ".$userdata['firstname'].",</p><br/>
-						
-						<p>Click <a href=\"".$iss."/resetpassword/".$data->username."\">here</a> tp reset your password</p>
-
-												
-						<p>Tripaider.in team</p>
+					<p>Hello ".$userdata['firstname'].",</p>
+					<p>We have received your request to update the password to your account on the tripaider website. If you made this request, please click on the link below to reset your password</p>					
+					<p><a href=\"".$dvl."/reset-password/".$encode."\">Reset Password Page</a></p><br />
+					<p>Thank you for visiting tripaider's website.<br/>
+					The TRIPAIDER Web Team</p>
 					";	
 
 					$mail->Body = $mail_body;
@@ -316,16 +309,16 @@ switch($request_method) {
 				http_response_code(404);
 				echo "Not Found";
 			}
-			break;			
 		
 		case 'PUT':
 			if(!empty($uri[3]) && $uri[3] === 'resetpassword') {
 				
-				$data = json_decode(file_get_contents("php://input"));	
-				$user->username = $data->username;
-				$user->password = md5($data->password);
+				$value = $uri[4];
+				$data = json_decode(file_get_contents("php://input"));
 				
-				$stmt = $user->getUser();					
+				//$user->username = $data->username;
+				$user->password = md5($data->password);				
+				$stmt = $user->getUserMD5($value,$key);					
 				$num = $stmt->rowCount();
 				
 				if($num === 0){
@@ -387,7 +380,7 @@ switch($request_method) {
 				$data = json_decode(file_get_contents("php://input"));	
 				$user->username = $decoded->data->username;	
 				$old_password = md5($data->old_password);
-				$user->password = md5($data->new_password);
+				$new_password = md5($data->new_password);
 				
 				$stmt = $user->getUser();					
 				$num = $stmt->rowCount();
@@ -401,6 +394,7 @@ switch($request_method) {
 						
 				} else {
 					$userdata = $stmt->fetch(PDO::FETCH_ASSOC);	
+					$user->password = $new_password;
 					
 					if( md5($data->old_password) != $userdata['password'] ) {
 						http_response_code(401);
@@ -429,12 +423,12 @@ switch($request_method) {
 				echo "Not Found";
 			}
 			break;
-		
 		default:
 			// Invalid Request Method
 			//header("HTTP/1.0 405 Method Not Allowed");
 			http_response_code(404);
-			echo "Not Found";
+			echo "Not Found1";
+			var_dump(encrypt_decrypt("admin","encrypt"));
 			break;
 }
 ?>

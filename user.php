@@ -74,7 +74,7 @@ class User{
     // login user
     function login(){
 		$query = "SELECT
-                `id`, `username`,`password`, `firstname`,`lastname`,`mobile`,status
+                `id`, `username`,`password`, `firstname`,`lastname`, `address`, `country`, `state`, `pincode`, `created`, `mobile`,status
             FROM
                 " . $this->table_name . " 
             WHERE
@@ -112,6 +112,20 @@ class User{
                 " . $this->table_name . " 
             WHERE
                 username='".htmlspecialchars($this->username)."'";
+		// prepare query statement
+		$stmt = $this->conn->prepare($query);
+		// execute query
+		$stmt->execute();
+		return $stmt;
+    }
+	
+	function getUserMD5($value,$key){
+		echo $query = "SELECT
+                `id`, `username`,`password`, `firstname`,`lastname`,`mobile`,`status`
+            FROM
+                " . $this->table_name . " 
+            WHERE
+                md5(CONCAT(username,'_','".$key."'))='".htmlspecialchars($value)."'";
 		// prepare query statement
 		$stmt = $this->conn->prepare($query);
 		// execute query
